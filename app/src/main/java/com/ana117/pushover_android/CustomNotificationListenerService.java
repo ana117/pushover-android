@@ -1,6 +1,8 @@
 package com.ana117.pushover_android;
 
 import android.app.Notification;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -28,6 +30,9 @@ public class CustomNotificationListenerService extends NotificationListenerServi
 
     private final OkHttpClient client = new OkHttpClient();
     public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
+
+    private static final String PREFS_NAME = "Pushover";
+    private static final String PREFS_KEY = "host";
 
     @Override
     public void onCreate() {
@@ -86,8 +91,17 @@ public class CustomNotificationListenerService extends NotificationListenerServi
         }
     }
 
+    private String getUrl() {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return sharedPreferences.getString(PREFS_KEY, null);
+    }
+
     private void sendNotificationDataToEndpoint(String packageName, String title, String text, String icon) {
-        String endpointUrl = "http://192.168.0.125:3333/alert";
+        String endpointUrl = getUrl();
+        if (endpointUrl == null) {
+            Log.e(TAG, "URL not set");
+            return;
+        }
 
         PackageManager pm = getApplicationContext().getPackageManager();
         ApplicationInfo ai;
