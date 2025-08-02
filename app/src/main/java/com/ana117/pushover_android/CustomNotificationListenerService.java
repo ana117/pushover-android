@@ -1,6 +1,11 @@
 package com.ana117.pushover_android;
 
 import android.app.Notification;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.Icon;
+import android.util.Base64;
 import android.util.Log;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
@@ -11,6 +16,8 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 public class CustomNotificationListenerService extends NotificationListenerService {
@@ -39,27 +46,53 @@ public class CustomNotificationListenerService extends NotificationListenerServi
         String packageName = sbn.getPackageName();
         Notification notification = sbn.getNotification();
 
+        String b64 = null;
         if (notification != null) {
             Bundle extras = notification.extras;
             CharSequence title = extras.getCharSequence(Notification.EXTRA_TITLE);
             CharSequence text = extras.getCharSequence(Notification.EXTRA_TEXT);
 
-            Log.d(TAG, "  Package: " + packageName);
-            Log.d(TAG, "  Title: " + (title != null ? title.toString() : "N/A"));
-            Log.d(TAG, "  Text: " + (text != null ? text.toString() : "N/A"));
+            if (text == null || title == null) return;
 
-            sendNotificationDataToEndpoint(packageName, title != null ? title.toString() : "", text != null ? text.toString() : "");
+            Icon icon = notification.getLargeIcon();
+            if (icon != null) {
+                Drawable drawable = icon.loadDrawable(this);
+                Bitmap bitmap = null;
+                if (drawable instanceof BitmapDrawable) {
+                    BitmapDrawable bitmapDrawable = (BitmapDrawable) drawable;
+                    if(bitmapDrawable.getBitmap() != null) {
+                        bitmap = bitmapDrawable.getBitmap();
+                    }
+                }
+
+                if (bitmap != null) {
+                    b64 = bitmapToBase64(bitmap);
+                }
+            }
+
+            Log.d(TAG, "  Package: " + packageName);
+            Log.d(TAG, "  Title: " + title);
+            Log.d(TAG, "  Text: " + text);
+            Log.d(TAG, "  Icon: " + notification.getLargeIcon());
+
+            sendNotificationDataToEndpoint(
+                    packageName,
+                    title.toString(),
+                    text.toString(),
+                    b64 != null ? b64 : ""
+            );
         }
     }
 
-    private void sendNotificationDataToEndpoint(String packageName, String title, String text) {
+    private void sendNotificationDataToEndpoint(String packageName, String title, String text, String icon) {
         String endpointUrl = "http://192.168.0.125:3333/alert";
 
         String message = String.format("%s\n%s", title, text);
         String json = String.format(
-                "{\"title\": \"%s\", \"message\": \"%s\"}",
+                "{\"title\": \"%s\", \"message\": \"%s\", \"icon\": \"%s\"}",
                 escapeJson(packageName),
-                escapeJson(message)
+                escapeJson(message),
+                escapeJson(icon)
         );
 
         RequestBody body = RequestBody.create(json, JSON);
@@ -92,5 +125,23 @@ public class CustomNotificationListenerService extends NotificationListenerServi
                 .replace("\n", "\\n")
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
+    }
+
+    private String bitmapToBase64(Bitmap bitmap) {
+        if (bitmap == null) {
+            return null;
+        }
+
+        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+            try {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+                byte[] byteArray = byteArrayOutputStream.toByteArray();
+                return Base64.encodeToString(byteArray, Base64.DEFAULT);
+            } catch (Exception e) {
+                return null;
+            }
+        } catch (IOException ignored) {
+            return null;
+        }
     }
 }
