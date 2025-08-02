@@ -1,6 +1,8 @@
 package com.ana117.pushover_android;
 
 import android.app.Notification;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -87,16 +89,24 @@ public class CustomNotificationListenerService extends NotificationListenerServi
     private void sendNotificationDataToEndpoint(String packageName, String title, String text, String icon) {
         String endpointUrl = "http://192.168.0.125:3333/alert";
 
-        String message = String.format("%s\n%s", title, text);
+        PackageManager pm = getApplicationContext().getPackageManager();
+        ApplicationInfo ai;
+        try {
+            ai = pm.getApplicationInfo(packageName, 0);
+        } catch (PackageManager.NameNotFoundException e) {
+            ai = null;
+        }
+        String applicationName = (String) (ai != null ? pm.getApplicationLabel(ai) : packageName);
+
+        String header = String.format("%s (%s)", title, applicationName);
         String json = String.format(
                 "{\"title\": \"%s\", \"message\": \"%s\", \"icon\": \"%s\"}",
-                escapeJson(packageName),
-                escapeJson(message),
+                escapeJson(header),
+                escapeJson(text),
                 escapeJson(icon)
         );
 
         RequestBody body = RequestBody.create(json, JSON);
-
         Request request = new Request.Builder()
                 .url(endpointUrl)
                 .post(body)
