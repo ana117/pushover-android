@@ -1,4 +1,6 @@
 # Pushover Android
+<img width="160" height="160" alt="Pushover" src="https://github.com/ana117/pushover-android/blob/main/app/src/main/res/drawable/ic_pushover.png" />
+
 This is a simple Android application designed to listen for incoming notifications and forward them to a customizable external endpoint. This allows users to centralize their notifications or integrate them with other services.
 Companion app for [Pushover Desktop](https://github.com/ana117/pushover-desktop).
 
