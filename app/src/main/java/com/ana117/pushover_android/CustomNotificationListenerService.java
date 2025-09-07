@@ -53,6 +53,16 @@ public class CustomNotificationListenerService extends NotificationListenerServi
         String packageName = sbn.getPackageName();
         Notification notification = sbn.getNotification();
 
+        // Ignore charging notifications
+        if (packageName.equals("com.android.systemui")) {
+            Bundle extras = notification.extras;
+            CharSequence title = extras.getCharSequence(Notification.EXTRA_TITLE);
+            if (title != null && title.toString().toLowerCase().contains("charging")) {
+                Log.d(TAG, "Ignoring charging notification");
+                return;
+            }
+        }
+
         String b64 = null;
         if (notification != null) {
             Bundle extras = notification.extras;
